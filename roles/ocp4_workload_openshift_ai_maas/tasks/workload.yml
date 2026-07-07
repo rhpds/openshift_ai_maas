@@ -5,6 +5,7 @@
     kind: Ingress
     name: cluster
   register: r_ingress
+  failed_when: r_ingress.resources | length == 0
 
 - name: Set cluster domain fact
   ansible.builtin.set_fact:
