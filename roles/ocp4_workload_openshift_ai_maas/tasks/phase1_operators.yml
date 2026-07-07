@@ -1,0 +1,134 @@
+---
+# -------------------------------------------------------
+# cert-manager operator (idempotent, Automatic approval)
+# -------------------------------------------------------
+- name: Check for existing cert-manager Subscription
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: openshift-cert-manager-operator
+    namespace: cert-manager-operator
+  register: r_certmgr_sub
+
+- name: Install cert-manager operator
+  when: r_certmgr_sub.resources | length == 0
+  block:
+    - name: Create cert-manager namespace
+      kubernetes.core.k8s:
+        state: present
+        template: namespace-cert-manager.yaml.j2
+
+    - name: Create cert-manager OperatorGroup
+      kubernetes.core.k8s:
+        state: present
+        template: operatorgroup-cert-manager.yaml.j2
+
+    - name: Create cert-manager Subscription
+      kubernetes.core.k8s:
+        state: present
+        template: subscription-cert-manager.yaml.j2
+
+    - name: Wait for cert-manager CSV Succeeded
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: cert-manager-operator
+      register: r_certmgr_csv
+      until:
+        - r_certmgr_csv.resources | selectattr('metadata.name', 'match', 'cert-manager') | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+# -------------------------------------------------------
+# LeaderWorkerSet operator (idempotent, Automatic approval)
+# -------------------------------------------------------
+- name: Check for existing LWS Subscription
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: leader-worker-set
+    namespace: openshift-lws-operator
+  register: r_lws_sub
+
+- name: Install LWS operator
+  when: r_lws_sub.resources | length == 0
+  block:
+    - name: Create LWS namespace
+      kubernetes.core.k8s:
+        state: present
+        template: namespace-lws.yaml.j2
+
+    - name: Create LWS OperatorGroup
+      kubernetes.core.k8s:
+        state: present
+        template: operatorgroup-lws.yaml.j2
+
+    - name: Create LWS Subscription
+      kubernetes.core.k8s:
+        state: present
+        template: subscription-lws.yaml.j2
+
+    - name: Wait for LWS CSV Succeeded
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: openshift-lws-operator
+      register: r_lws_csv
+      until:
+        - r_lws_csv.resources | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+# -------------------------------------------------------
+# Kuadrant / RHCL operator (idempotent, Manual approval)
+# -------------------------------------------------------
+- name: Check for existing Kuadrant Subscription
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: rhcl-operator
+    namespace: openshift-operators
+  register: r_kuadrant_sub
+
+- name: Install Kuadrant operator
+  when: r_kuadrant_sub.resources | length == 0
+  block:
+    - name: Create Kuadrant Subscription (Manual approval)
+      kubernetes.core.k8s:
+        state: present
+        template: subscription-kuadrant.yaml.j2
+
+    - name: Wait for Kuadrant InstallPlan to appear
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: InstallPlan
+        namespace: openshift-operators
+      register: r_kuadrant_ip
+      until:
+        - r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+    - name: Approve Kuadrant InstallPlan
+      kubernetes.core.k8s:
+        state: present
+        api_version: operators.coreos.com/v1alpha1
+        kind: InstallPlan
+        name: "{{ item.metadata.name }}"
+        namespace: openshift-operators
+        definition:
+          spec:
+            approved: true
+      loop: >-
+        {{ r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | list }}
+
+    - name: Wait for Kuadrant CSV Succeeded
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: openshift-operators
+      register: r_kuadrant_csv
+      until:
+        - r_kuadrant_csv.resources | selectattr('metadata.name', 'match', 'rhcl-operator') | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
