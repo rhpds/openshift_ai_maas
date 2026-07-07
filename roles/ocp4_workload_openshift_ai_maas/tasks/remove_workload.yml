@@ -26,19 +26,15 @@
   kubernetes.core.k8s:
     state: absent
     api_version: maas.opendatahub.io/v1alpha1
-    kind: "{{ cr_kind }}"
-    name: "{{ item.name }}-{{ cr_suffix }}"
+    kind: "{{ item.1.kind }}"
+    name: "{{ item.0.name }}-{{ item.1.suffix }}"
     namespace: models-as-a-service
-  loop: "{{ ocp4_workload_openshift_ai_maas_external_models }}"
-  loop_control:
-    label: "{{ item.name }}"
-  vars:
-    cr_kind: "{{ outer_item.kind }}"
-    cr_suffix: "{{ outer_item.suffix }}"
   with_nested:
     - "{{ ocp4_workload_openshift_ai_maas_external_models }}"
     - - { kind: MaaSAuthPolicy, suffix: access }
       - { kind: MaaSSubscription, suffix: default }
+  loop_control:
+    label: "{{ item.0.name }}-{{ item.1.suffix }}"
   ignore_errors: true
 
 # -------------------------------------------------------
