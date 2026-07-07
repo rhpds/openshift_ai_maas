@@ -105,7 +105,7 @@
         namespace: openshift-operators
       register: r_kuadrant_ip
       until:
-        - r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | list | length > 0
+        - r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | selectattr('spec.clusterServiceVersionNames', 'search', 'rhcl-operator') | list | length > 0
       retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
       delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
 
@@ -120,7 +120,7 @@
           spec:
             approved: true
       loop: >-
-        {{ r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | list }}
+        {{ r_kuadrant_ip.resources | selectattr('spec.approved', 'equalto', false) | selectattr('spec.clusterServiceVersionNames', 'search', 'rhcl-operator') | list }}
 
     - name: Wait for Kuadrant CSV Succeeded
       kubernetes.core.k8s_info:
