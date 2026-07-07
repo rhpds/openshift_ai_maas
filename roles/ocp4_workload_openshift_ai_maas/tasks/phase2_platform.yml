@@ -1,0 +1,84 @@
+---
+# -------------------------------------------------------
+# Kuadrant CR + Authorino
+# -------------------------------------------------------
+- name: Create kuadrant-system namespace
+  kubernetes.core.k8s:
+    state: present
+    template: namespace-kuadrant.yaml.j2
+
+- name: Create Kuadrant CR
+  kubernetes.core.k8s:
+    state: present
+    template: kuadrant-cr.yaml.j2
+
+- name: Wait for Kuadrant CR Ready
+  kubernetes.core.k8s_info:
+    api_version: kuadrant.io/v1beta1
+    kind: Kuadrant
+    name: kuadrant
+    namespace: kuadrant-system
+  register: r_kuadrant
+  until:
+    - r_kuadrant.resources | length > 0
+    - r_kuadrant.resources[0].status is defined
+    - r_kuadrant.resources[0].status.conditions is defined
+    - r_kuadrant.resources[0].status.conditions | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length > 0
+  retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+  delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+- name: Create Authorino CR
+  kubernetes.core.k8s:
+    state: present
+    template: authorino-cr.yaml.j2
+
+- name: Create Authorino Service with serving cert annotation
+  kubernetes.core.k8s:
+    state: present
+    template: service-authorino.yaml.j2
+
+# -------------------------------------------------------
+# User Workload Monitoring
+# -------------------------------------------------------
+- name: Enable User Workload Monitoring
+  kubernetes.core.k8s:
+    state: present
+    template: configmap-uwm.yaml.j2
+
+# -------------------------------------------------------
+# Gateway infrastructure
+# -------------------------------------------------------
+- name: Create GatewayClass
+  kubernetes.core.k8s:
+    state: present
+    template: gatewayclass.yaml.j2
+
+- name: Create gateway options ConfigMap
+  kubernetes.core.k8s:
+    state: present
+    template: configmap-gateway-options.yaml.j2
+
+- name: Create MaaS Gateway
+  kubernetes.core.k8s:
+    state: present
+    template: gateway.yaml.j2
+
+- name: Create passthrough Route for MaaS Gateway
+  kubernetes.core.k8s:
+    state: present
+    template: route-passthrough.yaml.j2
+
+- name: Wait for Gateway to be accepted
+  kubernetes.core.k8s_info:
+    api_version: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: maas-default-gateway
+    namespace: openshift-ingress
+  register: r_gateway
+  until:
+    - r_gateway.resources | length > 0
+    - r_gateway.resources[0].status is defined
+    - r_gateway.resources[0].status.conditions is defined
+    - r_gateway.resources[0].status.conditions | selectattr('type', 'equalto', 'Accepted') | selectattr('status', 'equalto', 'True') | list | length > 0
+  retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+  delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
