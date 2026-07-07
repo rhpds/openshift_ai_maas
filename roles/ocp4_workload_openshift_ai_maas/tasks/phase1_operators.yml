@@ -132,3 +132,25 @@
         - r_kuadrant_csv.resources | selectattr('metadata.name', 'match', 'rhcl-operator') | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
       retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
       delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+    - name: Wait for Authorino operator CSV Succeeded
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: openshift-operators
+      register: r_authorino_csv
+      until:
+        - r_authorino_csv.resources | selectattr('metadata.name', 'match', 'authorino-operator') | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+    - name: Wait for Limitador operator CSV Succeeded
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: openshift-operators
+      register: r_limitador_csv
+      until:
+        - r_limitador_csv.resources | selectattr('metadata.name', 'match', 'limitador-operator') | selectattr('status.phase', 'equalto', 'Succeeded') | list | length > 0
+      retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+      delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"

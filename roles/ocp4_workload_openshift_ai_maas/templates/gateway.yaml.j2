@@ -40,5 +40,5 @@ spec:
         certificateRefs:
           - group: ""
             kind: Secret
-            name: router-certs-default
+            name: {{ _ocp4_workload_openshift_ai_maas_gateway_tls_secret }}
         mode: Terminate

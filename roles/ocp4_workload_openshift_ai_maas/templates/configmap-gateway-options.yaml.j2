@@ -17,3 +17,6 @@ data:
               limits:
                 cpu: "2"
                 memory: {{ ocp4_workload_openshift_ai_maas_gateway_memory_limit }}
+  service: |
+    spec:
+      type: ClusterIP

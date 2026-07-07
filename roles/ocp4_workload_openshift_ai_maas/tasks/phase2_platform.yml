@@ -48,6 +48,20 @@
 # -------------------------------------------------------
 # Gateway infrastructure
 # -------------------------------------------------------
+- name: Get IngressController default certificate
+  kubernetes.core.k8s_info:
+    api_version: operator.openshift.io/v1
+    kind: IngressController
+    name: default
+    namespace: openshift-ingress-operator
+  register: r_ingress_controller
+
+- name: Set gateway TLS certificate secret name
+  ansible.builtin.set_fact:
+    _ocp4_workload_openshift_ai_maas_gateway_tls_secret: >-
+      {{ r_ingress_controller.resources[0].spec.defaultCertificate.name
+         | default('router-certs-default') }}
+
 - name: Create GatewayClass
   kubernetes.core.k8s:
     state: present
@@ -62,6 +76,17 @@
   kubernetes.core.k8s:
     state: present
     template: gateway.yaml.j2
+
+- name: Label redhat-ods-applications namespace for gateway access
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: redhat-ods-applications
+        labels:
+          maas.opendatahub.io/gateway-access: "true"
 
 - name: Create passthrough Route for MaaS Gateway
   kubernetes.core.k8s:
