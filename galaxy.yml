@@ -1,0 +1,19 @@
+---
+namespace: rhpds
+name: openshift_ai_maas
+version: 1.0.0
+readme: README.md
+authors:
+  - Tony Kay <ankay@redhat.com>
+description: >-
+  Ansible role to enable RHOAI 3.4 Models-as-a-Service (MaaS) governance
+  layer on an existing OpenShift cluster.
+license:
+  - GPL-2.0-or-later
+tags:
+  - openshift
+  - openshift-ai
+  - maas
+  - models-as-a-service
+dependencies: {}
+repository: https://github.com/rhpds/openshift_ai_maas

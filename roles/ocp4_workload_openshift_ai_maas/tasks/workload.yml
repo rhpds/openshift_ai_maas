@@ -1,0 +1,41 @@
+---
+- name: Get cluster ingress domain
+  kubernetes.core.k8s_info:
+    api_version: config.openshift.io/v1
+    kind: Ingress
+    name: cluster
+  register: r_ingress
+
+- name: Set cluster domain fact
+  ansible.builtin.set_fact:
+    _ocp4_workload_openshift_ai_maas_cluster_domain: >-
+      {{ r_ingress.resources[0].spec.domain }}
+
+- name: "Phase 1: Install prerequisite operators"
+  when: ocp4_workload_openshift_ai_maas_install_operators | bool
+  ansible.builtin.include_tasks: phase1_operators.yml
+
+- name: "Phase 2: Configure MaaS platform"
+  ansible.builtin.include_tasks: phase2_platform.yml
+
+- name: "Phase 3: Deploy PostgreSQL"
+  ansible.builtin.include_tasks: phase3_postgres.yml
+
+- name: "Phase 4: Enable MaaS in RHOAI"
+  ansible.builtin.include_tasks: phase4_rhoai_config.yml
+
+- name: "Phase 5: Deploy simulator model"
+  when: ocp4_workload_openshift_ai_maas_deploy_simulator | bool
+  ansible.builtin.include_tasks: phase5_simulator.yml
+
+- name: "Phase 6: Deploy external models"
+  when: ocp4_workload_openshift_ai_maas_external_models | length > 0
+  ansible.builtin.include_tasks: phase6_external_models.yml
+
+- name: Report MaaS API URL
+  agnosticd.core.agnosticd_user_info:
+    msg: >-
+      MaaS API: https://maas.{{ _ocp4_workload_openshift_ai_maas_cluster_domain }}
+    data:
+      maas_api_url: >-
+        https://maas.{{ _ocp4_workload_openshift_ai_maas_cluster_domain }}

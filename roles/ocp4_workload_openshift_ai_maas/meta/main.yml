@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_openshift_ai_maas
+  author: Tony Kay <ankay@redhat.com>
+  description: >-
+    Enable RHOAI 3.4 Models-as-a-Service (MaaS) governance layer
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.16"
+  platforms:
+    - name: EL
+      versions:
+        - all
+  galaxy_tags:
+    - openshift
+    - openshift-ai
+    - maas
+dependencies: []
