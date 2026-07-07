@@ -1,0 +1,65 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: simulated
+  namespace: llm
+spec:
+  model:
+    uri: hf://sshleifer/tiny-gpt2
+    name: "{{ ocp4_workload_openshift_ai_maas_simulator_model }}"
+  replicas: 1
+  router:
+    route: {}
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+  template:
+    containers:
+      - name: main
+        image: "{{ ocp4_workload_openshift_ai_maas_simulator_image }}"
+        imagePullPolicy: Always
+        command: ["/app/llm-d-inference-sim"]
+        args:
+          - --port
+          - "8000"
+          - --model
+          - "{{ ocp4_workload_openshift_ai_maas_simulator_model }}"
+          - --mode
+          - random
+          - --ssl-certfile
+          - /var/run/kserve/tls/tls.crt
+          - --ssl-keyfile
+          - /var/run/kserve/tls/tls.key
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+        ports:
+          - name: https
+            containerPort: 8000
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: https
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: https
+            scheme: HTTPS
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi

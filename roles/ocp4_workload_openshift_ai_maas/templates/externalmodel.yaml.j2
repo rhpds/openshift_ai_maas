@@ -1,0 +1,11 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: ExternalModel
+metadata:
+  name: "{{ item.name }}"
+  namespace: external-models
+spec:
+  provider: "{{ item.provider }}"
+  targetModel: "{{ item.target_model }}"
+  endpoint: "{{ item.endpoint }}"
+  credentialRef:
+    name: "{{ item.name }}-api-key"

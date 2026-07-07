@@ -1,0 +1,12 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: simulated
+  namespace: llm
+  annotations:
+    openshift.io/display-name: "{{ ocp4_workload_openshift_ai_maas_simulator_model }} (Simulated)"
+    openshift.io/description: CPU-only simulator for testing MaaS without a real LLM
+spec:
+  modelRef:
+    kind: LLMInferenceService
+    name: simulated

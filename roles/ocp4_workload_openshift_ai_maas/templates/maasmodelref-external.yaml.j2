@@ -1,0 +1,11 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: "{{ item.name }}"
+  namespace: external-models
+  annotations:
+    openshift.io/display-name: "{{ item.name }}"
+spec:
+  modelRef:
+    kind: ExternalModel
+    name: "{{ item.name }}"

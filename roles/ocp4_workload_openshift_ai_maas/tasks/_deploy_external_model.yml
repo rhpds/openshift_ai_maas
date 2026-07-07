@@ -1,0 +1,25 @@
+---
+- name: "Create API key secret for {{ item.name }}"
+  kubernetes.core.k8s:
+    state: present
+    template: secret-external-model.yaml.j2
+
+- name: "Create ExternalModel {{ item.name }}"
+  kubernetes.core.k8s:
+    state: present
+    template: externalmodel.yaml.j2
+
+- name: "Create MaaSModelRef for {{ item.name }}"
+  kubernetes.core.k8s:
+    state: present
+    template: maasmodelref-external.yaml.j2
+
+- name: "Create MaaSAuthPolicy for {{ item.name }}"
+  kubernetes.core.k8s:
+    state: present
+    template: maasauthpolicy-external.yaml.j2
+
+- name: "Create MaaSSubscription for {{ item.name }}"
+  kubernetes.core.k8s:
+    state: present
+    template: maassubscription-external.yaml.j2

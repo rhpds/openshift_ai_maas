@@ -1,0 +1,9 @@
+---
+- name: Create external-models namespace
+  kubernetes.core.k8s:
+    state: present
+    template: namespace-external-models.yaml.j2
+
+- name: Deploy external models
+  ansible.builtin.include_tasks: _deploy_external_model.yml
+  loop: "{{ ocp4_workload_openshift_ai_maas_external_models }}"

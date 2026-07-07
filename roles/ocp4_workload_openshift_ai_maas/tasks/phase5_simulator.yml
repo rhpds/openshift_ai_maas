@@ -1,0 +1,40 @@
+---
+- name: Create llm namespace
+  kubernetes.core.k8s:
+    state: present
+    template: namespace-llm.yaml.j2
+
+- name: Create simulator LLMInferenceService
+  kubernetes.core.k8s:
+    state: present
+    template: llminferenceservice-simulator.yaml.j2
+
+- name: Wait for simulator LLMInferenceService Ready
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1alpha1
+    kind: LLMInferenceService
+    name: simulated
+    namespace: llm
+  register: r_simulator
+  until:
+    - r_simulator.resources | length > 0
+    - r_simulator.resources[0].status is defined
+    - r_simulator.resources[0].status.conditions is defined
+    - r_simulator.resources[0].status.conditions | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length > 0
+  retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+  delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
+
+- name: Create simulator MaaSModelRef
+  kubernetes.core.k8s:
+    state: present
+    template: maasmodelref-simulator.yaml.j2
+
+- name: Create simulator MaaSAuthPolicy
+  kubernetes.core.k8s:
+    state: present
+    template: maasauthpolicy-simulator.yaml.j2
+
+- name: Create simulator MaaSSubscription
+  kubernetes.core.k8s:
+    state: present
+    template: maassubscription-simulator.yaml.j2
