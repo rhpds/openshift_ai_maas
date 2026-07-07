@@ -148,3 +148,35 @@
     name: kuadrant
     namespace: kuadrant-system
   ignore_errors: true
+
+# -------------------------------------------------------
+# Restore control-plane NoSchedule taints
+# -------------------------------------------------------
+- name: Get control-plane nodes
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - node-role.kubernetes.io/master
+  register: r_control_plane_nodes
+
+- name: Restore NoSchedule taint on control-plane nodes
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Node
+      metadata:
+        name: "{{ item.metadata.name }}"
+      spec:
+        taints: >-
+          {{ (item.spec.taints | default([]))
+             + [{'key': 'node-role.kubernetes.io/master', 'effect': 'NoSchedule'}] }}
+  loop: "{{ r_control_plane_nodes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  when: >-
+    item.spec.taints | default([])
+    | selectattr('key', 'equalto', 'node-role.kubernetes.io/master')
+    | list | length == 0
+  ignore_errors: true
