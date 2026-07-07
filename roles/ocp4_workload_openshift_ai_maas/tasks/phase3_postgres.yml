@@ -1,0 +1,59 @@
+---
+- name: Check for existing PostgreSQL credentials secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: postgres-creds
+    namespace: redhat-ods-applications
+  register: r_postgres_creds
+
+- name: Generate PostgreSQL password
+  when: r_postgres_creds.resources | length == 0
+  ansible.builtin.set_fact:
+    _ocp4_workload_openshift_ai_maas_postgres_password: >-
+      {{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}
+
+- name: Retrieve existing PostgreSQL password
+  when: r_postgres_creds.resources | length > 0
+  ansible.builtin.set_fact:
+    _ocp4_workload_openshift_ai_maas_postgres_password: >-
+      {{ r_postgres_creds.resources[0].data.POSTGRES_PASSWORD | b64decode }}
+
+- name: Create PostgreSQL credentials secret
+  kubernetes.core.k8s:
+    state: present
+    template: secret-postgres-creds.yaml.j2
+
+- name: Create MaaS DB config secret
+  kubernetes.core.k8s:
+    state: present
+    template: secret-maas-db-config.yaml.j2
+
+- name: Create PostgreSQL PVC
+  kubernetes.core.k8s:
+    state: present
+    template: pvc-postgres.yaml.j2
+
+- name: Create PostgreSQL Service
+  kubernetes.core.k8s:
+    state: present
+    template: service-postgres.yaml.j2
+
+- name: Create PostgreSQL Deployment
+  kubernetes.core.k8s:
+    state: present
+    template: deployment-postgres.yaml.j2
+
+- name: Wait for PostgreSQL Deployment ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: postgres
+    namespace: redhat-ods-applications
+  register: r_postgres
+  until:
+    - r_postgres.resources | length > 0
+    - r_postgres.resources[0].status.readyReplicas is defined
+    - r_postgres.resources[0].status.readyReplicas >= 1
+  retries: "{{ ocp4_workload_openshift_ai_maas_wait_retries }}"
+  delay: "{{ ocp4_workload_openshift_ai_maas_wait_delay }}"
