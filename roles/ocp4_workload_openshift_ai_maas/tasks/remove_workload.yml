@@ -152,22 +152,15 @@
 # -------------------------------------------------------
 # Restore control-plane NoSchedule taints
 # -------------------------------------------------------
-- name: Get control-plane node names
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Node
-    label_selectors:
-      - node-role.kubernetes.io/master
-  register: r_control_plane_nodes
-
-- name: Restore NoSchedule taint on control-plane nodes
-  ansible.builtin.command:
-    cmd: >-
-      oc adm taint node {{ item.metadata.name }}
-      node-role.kubernetes.io/master:NoSchedule
-  loop: "{{ r_control_plane_nodes.resources }}"
-  loop_control:
-    label: "{{ item.metadata.name }}"
-  register: r_taint
-  changed_when: "'tainted' in r_taint.stdout"
-  failed_when: false
+- name: Restore control-plane nodes to non-schedulable
+  kubernetes.core.k8s:
+    state: present
+    merge_type: merge
+    definition:
+      apiVersion: config.openshift.io/v1
+      kind: Scheduler
+      metadata:
+        name: cluster
+      spec:
+        mastersSchedulable: false
+  ignore_errors: true

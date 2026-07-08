@@ -2,25 +2,17 @@
 # -------------------------------------------------------
 # Make control-plane nodes schedulable
 # -------------------------------------------------------
-- name: Get control-plane node names
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Node
-    label_selectors:
-      - node-role.kubernetes.io/master
-  register: r_control_plane_nodes
-
-- name: Remove NoSchedule taint from control-plane nodes
-  ansible.builtin.command:
-    cmd: >-
-      oc adm taint node {{ item.metadata.name }}
-      node-role.kubernetes.io/master:NoSchedule-
-  loop: "{{ r_control_plane_nodes.resources }}"
-  loop_control:
-    label: "{{ item.metadata.name }}"
-  register: r_untaint
-  changed_when: "'untainted' in r_untaint.stdout"
-  failed_when: false
+- name: Make control-plane nodes schedulable
+  kubernetes.core.k8s:
+    state: present
+    merge_type: merge
+    definition:
+      apiVersion: config.openshift.io/v1
+      kind: Scheduler
+      metadata:
+        name: cluster
+      spec:
+        mastersSchedulable: true
 
 # -------------------------------------------------------
 # cert-manager operator (idempotent, Automatic approval)
