@@ -126,6 +126,15 @@
 # -------------------------------------------------------
 # Phase 2: Remove gateway infrastructure
 # -------------------------------------------------------
+- name: Delete BBR workaround EnvoyFilter
+  kubernetes.core.k8s:
+    state: absent
+    api_version: networking.istio.io/v1alpha3
+    kind: EnvoyFilter
+    name: fix-bbr-ext-proc-match
+    namespace: openshift-ingress
+  ignore_errors: true
+
 - name: Delete gateway resources
   kubernetes.core.k8s:
     state: absent

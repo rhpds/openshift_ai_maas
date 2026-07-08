@@ -1,0 +1,41 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: fix-bbr-ext-proc-match
+  namespace: openshift-ingress
+  labels:
+    app.kubernetes.io/part-of: models-as-a-service
+    maas.opendatahub.io/workaround: "true"
+spec:
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.ext_proc.bbr
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            allow_mode_override: true
+            failure_mode_allow: false
+            grpc_service:
+              envoy_grpc:
+                cluster_name: outbound|9004||payload-processing.openshift-ingress.svc.cluster.local
+            processing_mode:
+              request_body_mode: FULL_DUPLEX_STREAMED
+              request_header_mode: SEND
+              request_trailer_mode: SEND
+              response_body_mode: FULL_DUPLEX_STREAMED
+              response_header_mode: SEND
+              response_trailer_mode: SEND
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: maas-default-gateway
